@@ -23,7 +23,7 @@ vit=vit=ViT(
     drop_rate=0.1,
     emb_dropout=0.1
 )
-loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
 model.compile(optimizer='adam',loss=loss_fn)
 model.fit(x_train, y_train, epochs=5)
 ```
@@ -44,7 +44,6 @@ train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
 
 with strategy.scope():
   loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
-      from_logits=True,
       reduction=tf.keras.losses.Reduction.NONE)
   def compute_loss(labels, predictions):
     per_example_loss = loss_object(labels, predictions)
