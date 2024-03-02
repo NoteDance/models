@@ -8,43 +8,30 @@
 
 # Train:
 ```python
-from models.ConvNeXtV2 import ConvNeXtV2
-convnext_atto=ConvNeXtV2(model_type='atto',classes=1000)
-convnext_atto.build()
-
-train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(32)
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-optimizer = tf.keras.optimizers.Adam()
-train_loss = tf.keras.metrics.Mean(name='train_loss')
-
-@tf.function(jit_compile=True)
-def train_step(images, labels):
-  with tf.GradientTape() as tape:
-    predictions = convnext_atto(images)
-    loss = loss_object(labels, predictions)
-  gradients = tape.gradient(loss, convnext_atto.param)
-  optimizer.apply_gradients(zip(gradients, convnext_atto.param))
-  train_loss(loss)
-
-EPOCHS = 5
-
-for epoch in range(EPOCHS):
-  # Reset the metrics at the start of the next epoch
-  train_loss.reset_states()
-
-  for images, labels in train_ds:
-    train_step(images, labels)
-
-  print(
-    f'Epoch {epoch + 1}, '
-    f'Loss: {train_loss.result()}, '
-  )
+from models.ViT import ViT
+vit=vit=ViT(
+    image_size=224,
+    patch_size=16,
+    num_classes=1000,
+    dim=768,
+    depth=12,
+    heads=12,
+    mlp_dim=3072,
+    pool='cls',
+    channels=3,
+    dim_head=64,
+    drop_rate=0.1,
+    emb_dropout=0.1
+)
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+model.compile(optimizer='adam',loss=loss_fn)
+model.fit(x_train, y_train, epochs=5)
 ```
 
 
 # Distributed training:
 ```python
-from models.ConvNeXtV2 import ConvNeXtV2
+from models.ViT import ViT
 
 strategy = tf.distribute.MirroredStrategy()
 
@@ -64,17 +51,29 @@ with strategy.scope():
     return tf.nn.compute_average_loss(per_example_loss, global_batch_size=GLOBAL_BATCH_SIZE)
 
 with strategy.scope():
-  convnext_atto=ConvNeXtV2(model_type='atto',classes=10)
-  convnext_atto.build()
+    vit=ViT(
+      image_size=224,
+      patch_size=16,
+      num_classes=1000,
+      dim=768,
+      depth=12,
+      heads=12,
+      mlp_dim=3072,
+      pool='cls',
+      channels=3,
+      dim_head=64,
+      drop_rate=0.1,
+      emb_dropout=0.1
+  )
   optimizer = tf.keras.optimizers.Adam()
 
 def train_step(inputs):
   images, labels = inputs
   with tf.GradientTape() as tape:
-    predictions = convnext_atto(images)
+    predictions = vit(images)
     loss = compute_loss(labels, predictions)
-  gradients = tape.gradient(loss, convnext_atto.param)
-  optimizer.apply_gradients(zip(gradients, convnext_atto.param))
+  gradients = tape.gradient(loss, vit.weights)
+  optimizer.apply_gradients(zip(gradients, vit.weights))
   return loss
 
 @tf.function(jit_compile=True)
@@ -142,6 +141,6 @@ vit=ViT(
     pool='cls',
     channels=3,
     dim_head=64,
-    dropout=0.1,
+    drop_rate=0.1,
     emb_dropout=0.1
 )
