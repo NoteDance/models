@@ -193,7 +193,7 @@ class ResidualAttentionBlock(tf.keras.layers.Layer):
 
     def attention(self, x):
         self.attn_mask = tf.cast(self.attn_mask, x.dtype) if self.attn_mask is not None else None
-        return self.attn(x, mask=self.attn_mask)[0]
+        return self.attn(x, x, attention_mask=self.attn_mask)[0]
 
     def __call__(self, x):
         x = x + self.attention(self.ln_1(x))
