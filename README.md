@@ -143,3 +143,11 @@ vit=ViT(
     drop_rate=0.1,
     emb_dropout=0.1
 )
+```
+
+
+# Assign the trained parameters to the model:
+```python
+from models.assign_param import assign_param
+assign_param(model.weights,param)
+```
