@@ -89,7 +89,7 @@ for epoch in range(EPOCHS):
     num_batches += 1
   train_loss = total_loss / num_batches
 
-  template = ("Epoch {}, Loss: {})
+  template = ("Epoch {}, Loss: {}")
   print(template.format(epoch + 1, train_loss)
 ```
 
