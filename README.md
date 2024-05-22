@@ -9,7 +9,7 @@
 # Train:
 ```python
 from models.ViT import ViT
-vit=vit=ViT(
+vit=ViT(
     image_size=224,
     patch_size=16,
     num_classes=1000,
