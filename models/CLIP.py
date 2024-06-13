@@ -54,9 +54,14 @@ class Bottleneck(tf.keras.layers.Layer):
         return out
 
 
-class AttentionPool2d:
+class AttentionPool2d(tf.keras.layers.Layer):
     def __init__(self, spacial_dim: int, embed_dim: int, num_heads: int, output_dim: int = None):
-        self.positional_embedding = tf.Variable(tf.random.normal([spacial_dim ** 2 + 1, embed_dim]) / embed_dim ** 0.5)
+        self.positional_embedding = self.add_weight(
+            name='positional_embedding',
+            shape=[self.spacial_dim ** 2 + 1, self.embed_dim],
+            initializer=tf.keras.initializers.RandomNormal(mean=0., stddev=1./self.embed_dim**0.5),
+            trainable=True
+        )
         self.k_proj = Dense(embed_dim)
         self.q_proj = Dense(embed_dim)
         self.v_proj = Dense(embed_dim)
@@ -213,15 +218,25 @@ class Transformer:
         return self.resblocks(x)
 
 
-class VisionTransformer:
+class VisionTransformer(tf.keras.layers.Layer):
     def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
         self.input_resolution = input_resolution
         self.output_dim = output_dim
         self.conv1 = Conv2d(width, kernel_size=patch_size, strides=patch_size, use_bias=False)
 
         scale = width ** -0.5
-        self.class_embedding = tf.Variable(scale * tf.random.normal([width]))
-        self.positional_embedding = tf.Variable(scale * tf.random.normal((input_resolution // patch_size) ** 2 + 1, width))
+        self.class_embedding = self.add_weight(
+            name='class_embedding',
+            shape=[self.width],
+            initializer=tf.keras.initializers.RandomNormal(mean=0., stddev=1.0) * self.scale,
+            trainable=True
+        )
+        self.positional_embedding = self.add_weight(
+            name='positional_embedding',
+            shape=[(self.input_resolution // self.patch_size) ** 2 + 1, self.width],
+            initializer=tf.keras.initializers.RandomNormal(mean=0., stddev=1.0) * self.scale,
+            trainable=True
+        )
         self.ln_pre = LayerNorm(width)
 
         self.transformer = Transformer(width, layers, heads)
@@ -296,17 +311,32 @@ class CLIP(Model):
         )
 
         self.vocab_size = vocab_size
-        self.token_embedding = tf.Variable(tf.random.normal((vocab_size, transformer_width), 
-                                                stddev=0.02))
-        self.positional_embedding = tf.Variable(tf.random.normal((self.context_length, transformer_width), 
-                                                 stddev=0.01
-                                                 ))
+        self.token_embedding = self.add_weight(
+            name='token_embedding',
+            shape=(vocab_size, transformer_width),
+            initializer=tf.keras.initializers.RandomNormal(stddev=0.02),
+            trainable=True
+        )
+        self.positional_embedding = self.add_weight(
+            name='positional_embedding',
+            shape=(self.context_length, transformer_width),
+            initializer=tf.keras.initializers.RandomNormal(stddev=0.01),
+            trainable=True
+        )
         self.ln_final = LayerNorm(transformer_width)
 
-        self.text_projection = tf.Variable(tf.random.normal((transformer_width, embed_dim), 
-                                            stddev=self.transformer.width ** -0.5, 
-                                            ))
-        self.logit_scale = tf.Variable(tf.ones([]) * np.log(1 / 0.07))
+        self.text_projection = self.add_weight(
+            name='text_projection',
+            shape=(transformer_width, embed_dim),
+            initializer=tf.keras.initializers.RandomNormal(stddev=transformer_width ** -0.5),
+            trainable=True
+        )
+        self.logit_scale = self.add_weight(
+            name='logit_scale',
+            shape=[],
+            initializer=tf.keras.initializers.Constant(np.log(1 / 0.07)),
+            trainable=True
+        )
 
     def build_attention_mask(self):
         mask = tf.ones((self.context_length, self.context_length))
