@@ -24,10 +24,15 @@ class ModelArgs:
     weight_decay: float = 0.1
     
 
-class RMSNorm:
+class RMSNorm(tf.keras.layers.Layer):
     def __init__(self, dim: int, eps: float):
         self.eps = eps
-        self.weight = tf.Variable(tf.ones((dim,)))
+        self.weight = self.add_weight(
+            name='weight',
+            shape=(self.dim,),
+            initializer=tf.keras.initializers.Ones(),
+            trainable=True
+        )
 
     def _norm(self, x):
         return x * tf.math.rsqrt(tf.reduce_mean(tf.math.pow(x, 2), -1, keepdims=True) + self.eps)

@@ -150,7 +150,7 @@ class AudioEncoder:
         return x
 
 
-class TextDecoder:
+class TextDecoder(tf.keras.layers.Layer):
     def __init__(
         self,
         n_vocab: int,
@@ -160,8 +160,18 @@ class TextDecoder:
         n_layer: int,
         dtype = tf.float16,
     ):
-        self.token_embedding = tf.Variable(tf.random.normal([n_vocab, n_state]))
-        self.positional_embedding = tf.Variable(tf.zeros([n_ctx, n_state]))
+        self.token_embedding = self.add_weight(
+            name='token_embedding',
+            shape=[self.n_vocab, self.n_state],
+            initializer=tf.keras.initializers.RandomNormal(stddev=0.02),  # 设定标准差 stddev
+            trainable=True
+        )
+        self.positional_embedding = self.add_weight(
+            name='positional_embedding',
+            shape=[self.n_ctx, self.n_state],
+            initializer=tf.keras.initializers.Zeros(),  # 初始化为全零
+            trainable=True
+        )
 
         self.blocks = [
             ResidualAttentionBlock(n_state, n_head, cross_attention=True)

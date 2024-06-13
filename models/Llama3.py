@@ -25,10 +25,15 @@ class ModelArgs:
     max_seq_len: int = 2048
 
 
-class RMSNorm:
+class RMSNorm(tf.keras.layers.Layer):
     def __init__(self, dim: int, eps: float = 1e-6):
         self.eps = eps
-        self.weight = tf.Variable(tf.ones((dim)))
+        self.weight = self.add_weight(
+            name='weight',
+            shape=(self.dim,),
+            initializer=tf.keras.initializers.Ones(),
+            trainable=True
+        )
 
     def _norm(self, x):
         return x * tf.math.rsqrt(tf.reduce_mean(tf.pow(x, 2), -1, keepdims=True) + self.eps) 
@@ -89,7 +94,7 @@ def repeat_kv(x, n_rep: int):
     return tf.reshape(tf.tile(x[:, :, :, None, :], [1, 1, 1, n_rep, 1]), (bs, slen, n_kv_heads * n_rep, head_dim))
 
 
-class Attention:
+class Attention(tf.keras.layers.Layer):
     def __init__(self, args: ModelArgs):
         self.n_kv_heads = args.n_heads if args.n_kv_heads is None else args.n_kv_heads
         model_parallel_size = 1
@@ -115,22 +120,29 @@ class Attention:
             use_bias=False,
         )
 
-        self.cache_k = tf.Variable(tf.zeros(
-            (
+        self.cache_k = self.add_weight(
+            name='cache_k',
+            shape=(
                 args.max_batch_size,
                 args.max_seq_len,
                 self.n_local_kv_heads,
                 self.head_dim,
-            )
-        ), trainable=False)
-        self.cache_v = tf.Variable(tf.zeros(
-            (
+            ),
+            initializer=tf.keras.initializers.Zeros(),
+            trainable=False
+        )
+
+        self.cache_v = self.add_weight(
+            name='cache_v',
+            shape=(
                 args.max_batch_size,
                 args.max_seq_len,
                 self.n_local_kv_heads,
                 self.head_dim,
-            )
-        ), trainable=False)
+            ),
+            initializer=tf.keras.initializers.Zeros(),
+            trainable=False
+        )
 
     def __call__(
         self,

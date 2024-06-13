@@ -101,8 +101,18 @@ class ViT(Model):
         self.to_patch_embedding.add(Dense(dim))
         self.to_patch_embedding.add(LayerNormalization())
 
-        self.pos_embedding = tf.Variable(tf.random.normal((1, num_patches + 1, dim)))
-        self.cls_token = tf.Variable(tf.random.normal(((1, 1, dim))))
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding',
+            shape=(1, self.num_patches + 1, self.dim),
+            initializer=tf.keras.initializers.RandomNormal(stddev=0.02),  # 设定标准差 stddev
+            trainable=True
+        )
+        self.cls_token = self.add_weight(
+            name='cls_token',
+            shape=(1, 1, self.dim),
+            initializer=tf.keras.initializers.RandomNormal(stddev=0.02),  # 设定标准差 stddev
+            trainable=True
+        )
         self.dropout = Dropout(emb_dropout)
 
         self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, drop_rate)

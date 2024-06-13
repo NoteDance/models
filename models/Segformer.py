@@ -25,11 +25,21 @@ class DsConv2d:
     def __call__(self, x):
         return self.net(x)
 
-class LayerNorm:
+class LayerNorm(tf.keras.layers.Layer):
     def __init__(self, dim, eps = 1e-5):
         self.eps = eps
-        self.g = tf.Variable(tf.ones((1, dim, 1, 1)))
-        self.b = tf.Variable(tf.zeros((1, dim, 1, 1)))
+        self.g = self.add_weight(
+            name='g',
+            shape=(1, dim, 1, 1),
+            initializer=tf.keras.initializers.Ones(),
+            trainable=True
+        )
+        self.b = self.add_weight(
+            name='b',
+            shape=(1, dim, 1, 1),
+            initializer=tf.keras.initializers.Zeros(),
+            trainable=True
+        )
 
     def __call__(self, x):
         std = tf.math.sqrt(tf.math.reduce_variance(x, axis=1, keepdims=True))

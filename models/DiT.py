@@ -55,13 +55,18 @@ class TimestepEmbedder:
         return t_emb
 
 
-class LabelEmbedder:
+class LabelEmbedder(tf.keras.layers.Layer):
     """
     Embeds class labels into vector representations. Also handles label dropout for classifier-free guidance.
     """
     def __init__(self, num_classes, hidden_size, dropout_prob):
         use_cfg_embedding = dropout_prob > 0
-        self.embedding_table = tf.Variable(tf.random.normal((num_classes + use_cfg_embedding, hidden_size), stddev=0.02))
+        self.embedding_table = self.add_weight(
+            name='embedding_table',
+            shape=(num_classes + use_cfg_embedding, hidden_size),
+            initializer=tf.keras.initializers.RandomNormal(stddev=0.02),
+            trainable=True
+        )
         self.num_classes = num_classes
         self.dropout_prob = dropout_prob
 
@@ -156,7 +161,12 @@ class DiT(Model):
         self.y_embedder = LabelEmbedder(num_classes, hidden_size, class_dropout_prob)
         num_patches = self.x_embedder.num_patches
         # Will use fixed sin-cos embedding:
-        self.pos_embed = tf.zeros((1, num_patches, hidden_size))
+        self.pos_embed = self.add_weight(
+            name='pos_embed',
+            shape=(1, num_patches, hidden_size),
+            initializer=tf.keras.initializers.Zeros(),
+            trainable=False  # To freeze this variable
+        )
 
         self.blocks = [
             DiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio) for _ in range(depth)
@@ -167,8 +177,7 @@ class DiT(Model):
     def initialize_weights(self):
         # Initialize (and freeze) pos_embed by sin-cos embedding:
         pos_embed = get_2d_sincos_pos_embed(self.pos_embed.shape[-1], int(self.x_embedder.num_patches ** 0.5))
-        self.pos_embed = tf.convert_to_tensor(pos_embed, dtype=tf.float32)[tf.newaxis, :]
-        tf.Variable(self.pos_embed)
+        self.pos_embed.assign(tf.convert_to_tensor(pos_embed, dtype=tf.float32)[tf.newaxis, :])
 
     def unpatchify(self, x):
         """

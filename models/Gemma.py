@@ -66,12 +66,17 @@ def apply_rotary_emb(x, freqs_cis):
     return x_out
 
 
-class Embedder:
+class Embedder(tf.keras.layers.Layer):
   """Embedder module."""
   def __init__(self, config: GemmaConfig):
     self.vocab_size = config.vocab_size
     self.embed_dim = config.hidden_size
-    self.input_embedding_table = tf.Variable(tf.random.normal((self.vocab_size, self.embed_dim)))
+    self.input_embedding_table = self.add_weight(
+        name='input_embedding_table',
+        shape=(self.vocab_size, self.embed_dim),
+        initializer=tf.keras.initializers.RandomNormal(stddev=0.02),
+        trainable=True
+    )
 
   def encode(self, x):
     x = tf.gather(self.input_embedding_table, x)
@@ -92,7 +97,12 @@ class RMSNorm:
     ):
         self.eps = eps
         self.add_unit_offset = add_unit_offset
-        self.weight = tf.Variable(tf.random.zeros((dim)))
+        self.weight = self.add_weight(
+            name='weight',
+            shape=(self.dim,),
+            initializer=tf.keras.initializers.Zeros(),
+            trainable=True
+        )
 
     def _norm(self, x):
         return x * tf.math.rsqrt(tf.reduce_mean(tf.math.pow(x, 2), axis=-1, keepdims=True) + self.eps)
